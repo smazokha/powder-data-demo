@@ -1,0 +1,53 @@
+clear; close all; clc;
+addpath('5g_tools');
+
+PATH = '/Users/stepanmazokha/Downloads/GlobecomPOWDER/5G_Day_1_bes_s1.bin';
+sampleRate = 7.69e6;
+rc = 'NR-FR1-TM1.2'; % reference channel 
+bw = "5MHz"; % bandwidth
+scs = "60kHz"; % subcarr spacing
+dm = "FDD"; % duplexing mode (inferred based on LTE Band 7)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+rxWaveform = read_signal(PATH, false);
+
+figure;
+spectrogram(rxWaveform, ones(512,1), 0, 512, 'centered', sampleRate, 'yaxis', 'MinThreshold', -130);
+title('Signal Spectrogram');
+
+rcwavegen = hNRReferenceWaveformGenerator(rc,bw,scs,dm);
+cfgDL = rcwavegen.Config;
+
+cfg = struct();
+cfg.PlotEVM = true;      
+cfg.DisplayEVM = true;    
+cfg.SampleRate = sampleRate;
+cfg.IQImbalance = true;
+cfg.CorrectCoarseFO = true;
+cfg.CorrectFineFO = true;
+cfg.ExcludeDC = true;
+
+[evmInfo,eqSym,refSym] = hNRDownlinkEVM(cfgDL, rxWaveform, cfg);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function [X] = read_signal(path, show)
+    fileID = fopen(path, 'r');
+    
+    data = fread(fileID, 'float32');
+    
+    fclose(fileID);
+    
+    X = complex(data(1:2:end), data(2:2:end));
+
+    if show
+        figure;
+        plot(1:length(X), real(X));
+        title('Signal (Real part)');
+    end
+end
